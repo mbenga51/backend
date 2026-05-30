@@ -8,6 +8,7 @@ import cors from "cors";
 import createProductTable from "./models/productTable.js";
 import createStock_transactions from "./models/StockInTracnstions.js";
 import createStock_transactions_out from "./models/stockOutModel.js";
+import createUsersTable from "./models/userModel.js";
 const app = express();
 const PORT = process.env.PORT || 5000;
 app.use(express.json());
@@ -15,9 +16,11 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
 // table creation
+await createUsersTable()
 await createProductTable()
 await createStock_transactions()
 await createStock_transactions_out()
+
 
 // api route
 app.use("/api/users", userRouter);
