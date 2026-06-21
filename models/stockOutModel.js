@@ -10,6 +10,10 @@ const createStock_transactions_out = async () => {
 
       quantity INT NOT NULL,
       note TEXT,
+      unit_price DECIMAL(10,2),
+      total_amount DECIMAL(10,2),
+      payment_method ENUM('cash','mobile_money','bank'),
+      payment_status ENUM('paid','pending'),
 
       transaction_type ENUM('stock_in', 'stock_out') NOT NULL,
 
@@ -37,4 +41,3 @@ const createStock_transactions_out = async () => {
 };
 
 export default createStock_transactions_out;
-

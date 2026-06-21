@@ -1,4 +1,7 @@
 import db from "../config/db.js";
+import PDFDocument from "pdfkit";
+// import PDFDocument from "pdfkit";
+// import db from "../config/db.js";
 
 export const getProducts = async (req, res) => {
   try {
@@ -9,6 +12,7 @@ export const getProducts = async (req, res) => {
   }
 };
 export const createProduct = async (req, res) => {
+  console.log("Received data:", req.body);
   const {
     name,
     product_number,
@@ -199,6 +203,120 @@ export const deleteProduct = async (req, res) => {
 
     return res.status(500).json({
       message: "Server Error",
+      error: error.message,
+    });
+  }
+};
+
+
+export const exportProductsPDF = async (req, res) => {
+  try {
+    // ===============================
+    // 1. GET PRODUCTS
+    // ===============================
+    const [products] = await db.query("SELECT * FROM products");
+
+    // ===============================
+    // 2. SUMMARY DATA
+    // ===============================
+    const [summaryRows] = await db.query(`
+      SELECT 
+        COUNT(*) AS totalProducts,
+        SUM(quantity * price) AS totalValue,
+        COUNT(DISTINCT category) AS categories,
+        SUM(CASE WHEN quantity <= minStock THEN 1 ELSE 0 END) AS lowStock
+      FROM products
+    `);
+
+    // ===============================
+    // 3. STOCK TRANSACTIONS (FIXED)
+    // ===============================
+    const [stockInRows] = await db.query(`
+      SELECT SUM(quantity) AS stockIn 
+      FROM stock_transactions 
+      WHERE transaction_type = 'stock_in'
+    `);
+
+    const [stockOutRows] = await db.query(`
+      SELECT SUM(quantity) AS stockOut 
+      FROM stock_transactions 
+      WHERE transaction_type = 'stock_out'
+    `);
+
+    // ===============================
+    // 4. SUMMARY OBJECT
+    // ===============================
+    const summary = {
+      totalProducts: summaryRows[0].totalProducts || 0,
+      totalValue: summaryRows[0].totalValue || 0,
+      categories: summaryRows[0].categories || 0,
+      lowStock: summaryRows[0].lowStock || 0,
+      stockIn: stockInRows[0].stockIn || 0,
+      stockOut: stockOutRows[0].stockOut || 0,
+    };
+
+    // ===============================
+    // 5. CREATE PDF
+    // ===============================
+    const doc = new PDFDocument({ margin: 30 });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=inventory-report.pdf"
+    );
+
+    doc.pipe(res);
+
+    // ===============================
+    // 6. HEADER
+    // ===============================
+    doc.fontSize(18).text("Inventory Products Report", {
+      align: "center",
+    });
+
+    doc.moveDown();
+
+    // ===============================
+    // 7. SUMMARY SECTION
+    // ===============================
+    doc.fontSize(12);
+    doc.text(`Total Products: ${summary.totalProducts}`);
+    doc.text(`Total Inventory Value: GMD ${summary.totalValue}`);
+    doc.text(`Categories: ${summary.categories}`);
+    doc.text(`Low Stock Items: ${summary.lowStock}`);
+    doc.text(`Total Stock In: ${summary.stockIn}`);
+    doc.text(`Total Stock Out: ${summary.stockOut}`);
+
+    doc.moveDown();
+
+    // ===============================
+    // 8. TABLE HEADER
+    // ===============================
+    doc.fontSize(10);
+    doc.text(
+      "Name | Product No | Category | Qty | MinStock | Price | Supplier"
+    );
+
+    doc.moveDown(0.5);
+
+    // ===============================
+    // 9. TABLE ROWS
+    // ===============================
+    products.forEach((p) => {
+      doc.text(
+        `${p.name} | ${p.product_number} | ${p.category} | ${p.quantity} | ${p.minStock} | GMD ${p.price} | ${p.supplier}`
+      );
+    });
+
+    // ===============================
+    // 10. END PDF
+    // ===============================
+    doc.end();
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Failed to generate PDF",
       error: error.message,
     });
   }

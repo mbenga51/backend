@@ -15,24 +15,21 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
-// table creation
-await createUsersTable()
-await createProductTable()
-await createStock_transactions()
-await createStock_transactions_out()
+// // table creation
+// await createUsersTable()
+// await createProductTable()
+// await createStock_transactions()
+// await createStock_transactions_out()
 
 
 // api route
 app.use("/api/users", userRouter);
 app.use("/api/products", productRouter);
-app.listen(PORT, () => { 
+app.use("/api/users", userRouter);
+app.use("/api/products", productRouter);
+app.use("/api/stock-in", stockInRouter);
+app.use("/api/stock-out", stockOutRouter);
+
+app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
-  app.use("/api/products", productRouter);
-  app.use("/api/users", userRouter);
-  app.use("/api/stock-in", stockInRouter);
-  app.use("/api/stock-out", stockOutRouter);
-  // app.use("/api/suppliers", supplierRouter);
-  // app.use("/api/categories", categoryRouter);
-  // app.use("/api/reports", reportRouter);
-  // app.use("/api/lowstock", lowStockRouter);
 });
